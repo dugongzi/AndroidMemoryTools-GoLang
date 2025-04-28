@@ -30,6 +30,6 @@ go build -trimpath -ldflags="-s -w" -o "$BIN_NAME" . || {
 
 # 推送执行
 adb push "$BIN_NAME" "$DEVICE_PATH/" && \
-adb shell chmod 755 "$DEVICE_PATH/$BIN_NAME" && \
-echo "▸ 执行结果：" && \
-adb shell "cd $DEVICE_PATH && ./$BIN_NAME"
+adb shell chmod 777 "$DEVICE_PATH/$BIN_NAME" && \
+echo "▸ 执行结果:"
+adb shell "su -c 'cd $DEVICE_PATH && ./$BIN_NAME'"
