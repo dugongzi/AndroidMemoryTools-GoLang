@@ -3,5 +3,6 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("hello world")
+	pid := getPid("com.cyhxzhdzy.kz")
+	fmt.Println(pid)
 }

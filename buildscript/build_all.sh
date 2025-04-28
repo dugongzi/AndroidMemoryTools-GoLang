@@ -1,27 +1,35 @@
 #!/bin/bash
-# 参数配置区（您只需要改这里）
-SOURCE_PATH="../main.go"  # 您的Go源码绝对/相对路径
-BIN_NAME="AndroidMemoryTools"                     # 生成的二进制文件名
-DEVICE_PATH="/data/local/tmp"             # 设备存储路径
+# 强制编译当前目录所有关联文件的版本
 
-# 自动检测设备架构
+# 参数配置
+SOURCE_DIR="../"  # 源码目录（根据实际情况调整）
+BIN_NAME="AndroidMemoryTools"
+DEVICE_PATH="/data/local/tmp"
+
+# 获取设备架构
 DEVICE_ABI=$(adb shell getprop ro.product.cpu.abi | tr -d '\r\n')
-case $DEVICE_ABI in
+case "$DEVICE_ABI" in
     *arm64*) GOARCH="arm64" ;;
-    *armv7*) GOARCH="arm" ;;
+    *armeabi*|*armv7*) GOARCH="arm" ;;
     *x86_64*) GOARCH="amd64" ;;
     *x86*) GOARCH="386" ;;
     *) echo "不支持的架构: $DEVICE_ABI"; exit 1 ;;
 esac
 
-# 编译指定源码
-echo "正在编译 $SOURCE_PATH -> $BIN_NAME (GOARCH=$GOARCH)"
+# 编译命令（关键修改！）
+echo "▸ 编译 $SOURCE_DIR 下的所有关联文件 (GOARCH=$GOARCH)"
+cd "$SOURCE_DIR" && \
 CGO_ENABLED=0 GOOS=android GOARCH=$GOARCH \
-go build -trimpath -ldflags="-s -w" -o "$BIN_NAME" "$SOURCE_PATH"
+go build -trimpath -ldflags="-s -w" -o "$BIN_NAME" . || {
+    echo "编译失败！常见原因："
+    echo "1. 函数名大小写错误（Go区分大小写）"
+    echo "2. 文件头package声明不一致"
+    echo "3. 函数未首字母大写（无法跨包调用）"
+    exit 1
+}
 
-# 推送到设备
-adb push "$BIN_NAME" "$DEVICE_PATH/"
-adb shell chmod +x "$DEVICE_PATH/$BIN_NAME"
-echo "程序已推送至设备:"
-adb shell ls -lh "$DEVICE_PATH/$BIN_NAME"
-adb shell su -c "$DEVICE_PATH/$BIN_NAME"
+# 推送执行
+adb push "$BIN_NAME" "$DEVICE_PATH/" && \
+adb shell chmod 755 "$DEVICE_PATH/$BIN_NAME" && \
+echo "▸ 执行结果：" && \
+adb shell "cd $DEVICE_PATH && ./$BIN_NAME"
